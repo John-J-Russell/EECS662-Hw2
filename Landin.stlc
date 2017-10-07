@@ -1,0 +1,7 @@
+-- (VPair (VInt 3) (VPair (VInt 6) (VInt 10)),fromList [(0,VFun [("trirec",VRef 0)] "n" (CIf (CIs0 (CVar "n")) (CInt 0) (CAdd (CVar "n") (CApp (CGet (CVar "trirec")) (CAdd (CVar "n") (CMult (CInt 1) (CInt (-1)))))))))]
+
+data Triple = Triple Int Int Int in
+let trirec = ref (\n : Int -> n) in
+let tri = \n : Int -> if isz n then 0 else n + get trirec (n - 1) in
+put trirec tri;
+Triple (tri 2) (tri 3) (tri 4)

@@ -1,0 +1,7 @@
+-- (VPair (VInt 3) (VPair (VInt 6) (VInt 10)),fromList [(0,VInt 3),(1,VInt 6),(2,VInt 10)])
+
+data Triple = Triple Int Int Int in
+let triloop = fix (\triloop : (Int -> Ref Int -> Int) -> \n : Int -> \z : Ref Int ->
+                      if isz n then get z else put z (n + get z); triloop (n - 1) z) in
+let tri = \n : Int -> let z = ref 0 in triloop n z in
+Triple (tri 2) (tri 3) (tri 4)

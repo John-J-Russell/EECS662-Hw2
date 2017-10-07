@@ -1,0 +1,6 @@
+-- (VInt 6,fromList [(0,VInt 2),(1,VInt 6)])
+
+let i = ref 2 in
+let j = ref 0 in
+let f = \ z : 1 -> put j (get j + get i) in
+f (); f (); f (); get j
