@@ -90,6 +90,15 @@ check g (CCase e (x1, e1) (x2, e2)) =
 check g (CFix f) =
     do CTFun t (CTFun u v) <- check g f
        if t == CTFun u v then return t else Nothing
+check g (CRef e) =
+    CTRef (check g e) --See evaluation rules in specification
+check g (CGet e) = --If e is a CTRef type "t", return "t"
+    do CTRef x1 <- (check g e)
+       return x1
+check g (CPut key to_be_stored) = --key is the Ref, to_be_stored is the expr
+    do CTRef cell_type = check g key --Get the type of the reference
+       storage_type = check g to_be_stored --get type of expression
+       if cell_type == storage_type then return storage_type else Nothing
 
 --------------------------------------------------------------------------------
 -- Evaluation
