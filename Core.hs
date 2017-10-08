@@ -110,11 +110,12 @@ data Value = VInt Integer | VBool Bool | VFun VEnv Ident Core
            | VRef Integer
   deriving (Eq, Show)
 
-run r = r
+run r = r --This needs to be modified...somehow. See lecture notes.
 
 type VEnv = [(Ident, Value)]
 
-eval :: VEnv -> Core -> Value
+eval :: VEnv -> Core -> Value --This isn't accurate anymore
+--Add state to all of these.
 eval _ (CInt x) =
     VInt x
 eval h (CAdd e1 e2) =
@@ -169,3 +170,7 @@ eval h (CCase e (x1, e1) (x2, e2)) =
       VInr w -> eval ((x2, w) : h) e2
 eval h (CFix f) =
     VFun h "$x" (CApp (CApp f (CFix f)) (CVar "$x"))
+--CRef Core | CGet Core | CPut Core Core
+eval h (CRef e) = error "This ain't implemented" --Going to need to add state
+eval h (CGet k) = error "This isn't either" --K for key?
+eval h (CPut key to_be_stored) = error "Why haven't you learned yet?"
