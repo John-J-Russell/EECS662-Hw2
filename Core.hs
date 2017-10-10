@@ -110,67 +110,77 @@ data Value = VInt Integer | VBool Bool | VFun VEnv Ident Core
            | VRef Integer
   deriving (Eq, Show)
 
-run r = r --This needs to be modified...somehow. See lecture notes.
+run r = r Map.empty --This needs to be modified...somehow. See lecture notes.
 
 type VEnv = [(Ident, Value)]
 
-eval :: VEnv -> Core -> Value --This isn't accurate anymore
+eval :: VEnv -> Core -> Map Integer Value -> (Value, Map Integer Value)
+ --This isn't accurate anymore
 --Add state to all of these.
-eval _ (CInt x) =
-    VInt x
-eval h (CAdd e1 e2) =
-    let VInt x1 = eval h e1
-        VInt x2 = eval h e2 in
-    VInt (x1 + x2)
-eval h (CMult e1 e2) =
-    let VInt x1 = eval h e1
-        VInt x2 = eval h e2 in
-    VInt (x1 * x2)
-eval _ (CBool b) =
-    VBool b
-eval h (CIs0 e) =
-    let VInt x = eval h e in
-    VBool (x == 0)
-eval h (CIf e1 e2 e3) =
-    let VBool b = eval h e1 in
-    if b then eval h e2 else eval h e3
-eval h (CVar x) =
-    let Just v = lookup x h in v
-eval h (CLam x _ e) =
-    VFun h x e
-eval h (CApp e1 e2) =
-    let VFun h' x e = eval h e1
-        v = eval h e2 in
-    eval ((x, v) : h') e
-eval h (CLet x e1 e2) =
-    let v1 = eval h e1 in
-    eval ((x,v1) : h) e2
-eval h (CPair e1 e2) =
-    let v1 = eval h e1
-        v2 = eval h e2 in
-    VPair v1 v2
-eval h (CLetPair x1 x2 e1 e2) =
-    let VPair v1 v2 = eval h e1 in
-    eval ((x1, v1) : (x2, v2) : h) e2
-eval h CUnit =
-    VUnit
-eval h (CLetUnit e1 e2) =
-    let VUnit = eval h e1 in
-    eval h e2
-eval h (CInl _ _ e) =
-    let v = eval h e in
-    VInl v
-eval h (CInr _ _ e) =
-    let v = eval h e in
-    VInr v
-eval h (CCase e (x1, e1) (x2, e2)) =
-    let v = eval h e in
+eval _ (CInt x) my_map =
+    (VInt x, my_map)
+eval h (CAdd e1 e2) my_map =
+    let (VInt x1, my_map2) = eval h e1 my_map
+        (VInt x2, my_map3) = eval h e2 my_map2 in
+    (VInt (x1 + x2), my_map3) --etc for the rest
+eval h (CMult e1 e2) my_map =
+    let (VInt x1, my_map2) = eval h e1 my_map
+        (VInt x2, my_map3) = eval h e2 my_map2 in
+    (VInt (x1 * x2), my_map3)
+eval _ (CBool b) my_map =
+    (VBool b, my_map)
+eval h (CIs0 e) my_map =
+    let (VInt x , my_map2) = eval h e my_map in
+    (VBool (x == 0) , my_map2)
+eval h (CIf e1 e2 e3) my_map =
+    let (VBool b, my_map2) = eval h e1 my_map in
+    if b then eval h e2 my_map2 else eval h e3 my_map2
+eval h (CVar x) my_map =
+    let Just v = lookup x h in (v, my_map) --This is very probably quite broken
+eval h (CLam x _ e) my_map =
+    (VFun h x e, my_map)
+eval h (CApp e1 e2) my_map =
+    let (VFun h' x e, my_map2) = eval h e1 my_map
+        (v, my_map3) = eval h e2 my_map2 in
+    (eval ((x, v) : h') e my_map3)
+eval h (CLet x e1 e2) my_map =
+    let (v1, my_map2) = eval h e1 my_map in
+    eval ((x,v1) : h) e2 my_map2
+eval h (CPair e1 e2) my_map =
+    let (v1 , my_map2) = eval h e1 my_map
+        (v2 , my_map3) = eval h e2 my_map2 in
+    (VPair v1 v2 , my_map3)
+eval h (CLetPair x1 x2 e1 e2) my_map =
+    let (VPair v1 v2, my_map2) = eval h e1 my_map in
+    eval ((x1, v1) : (x2, v2) : h) e2 my_map2
+eval h CUnit my_map =
+    (VUnit, my_map)
+eval h (CLetUnit e1 e2) my_map =
+    let (VUnit, my_map2) = eval h e1 my_map in
+    eval h e2 my_map2
+eval h (CInl _ _ e) my_map =
+    let (v, my_map2) = eval h e my_map in
+    (VInl v, my_map2)
+eval h (CInr _ _ e) my_map =
+    let (v, my_map2) = eval h e my_map in
+    (VInr v, my_map2)
+eval h (CCase e (x1, e1) (x2, e2)) my_map =
+    let (v, my_map2) = eval h e my_map in
     case v of
-      VInl w -> eval ((x1, w) : h) e1
-      VInr w -> eval ((x2, w) : h) e2
-eval h (CFix f) =
-    VFun h "$x" (CApp (CApp f (CFix f)) (CVar "$x"))
+      VInl w -> eval ((x1, w) : h) e1 my_map2 
+      VInr w -> eval ((x2, w) : h) e2 my_map2
+eval h (CFix f) my_map =
+    (VFun h "$x" (CApp (CApp f (CFix f)) (CVar "$x")) , my_map)
 --CRef Core | CGet Core | CPut Core Core
-eval h (CRef e) = error "This ain't implemented" --Going to need to add state
-eval h (CGet k) = error "This isn't either" --K for key?
-eval h (CPut key to_be_stored) = error "Why haven't you learned yet?"
+eval h (CRef expr) my_map = --error "This ain't implemented" --returns VRef INTEGER
+    let (store_this, new_map) = eval h expr my_map in
+        let highest_key = maximum (Map.keys new_map) in
+            (VRef (highest_key + 1) , Map.insert (highest_key + 1) store_this new_map)
+eval h (CGet key) my_map = --error "This isn't either" --K for key
+    let (evaled_key , new_map) = eval h key my_map in
+        (Map.lookup evaled_key new_map , new_map)
+eval h (CPut key to_be_stored) my_map = -- error "Why haven't you learned yet?"
+    let (evaled_key , my_map2) = eval h key my_map
+        (evaled_storage, my_map3) = eval h to_be_stored my_map2
+        newest_map = Map.insert evaled_key evaled_storage my_map3 in
+        (VUnit , newest_map)
