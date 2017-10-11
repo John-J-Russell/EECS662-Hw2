@@ -2,7 +2,7 @@ module Core where
 
 import Data.Map (Map)
 import qualified Data.Map as Map
-
+import Data.Maybe
 --------------------------------------------------------------------------------
 -- Core syntax
 --------------------------------------------------------------------------------
@@ -91,13 +91,14 @@ check g (CFix f) =
     do CTFun t (CTFun u v) <- check g f
        if t == CTFun u v then return t else Nothing
 check g (CRef e) =
-    CTRef (check g e) --See evaluation rules in specification
+    do variable <- check g e
+       return(CTRef variable) --See evaluation rules in specification
 check g (CGet e) = --If e is a CTRef type "t", return "t"
     do CTRef x1 <- (check g e)
        return x1
 check g (CPut key to_be_stored) = --key is the Ref, to_be_stored is the expr
-    do CTRef cell_type = check g key --Get the type of the reference
-       storage_type = check g to_be_stored --get type of expression
+    do CTRef cell_type <- check g key --Get the type of the reference
+       storage_type <- check g to_be_stored --get type of expression
        if cell_type == storage_type then return CTOne else Nothing --return unit or nothing
 
 --------------------------------------------------------------------------------
@@ -174,13 +175,14 @@ eval h (CFix f) my_map =
 --CRef Core | CGet Core | CPut Core Core
 eval h (CRef expr) my_map = --error "This ain't implemented" --returns VRef INTEGER
     let (store_this, new_map) = eval h expr my_map in
-        let highest_key = maximum (Map.keys new_map) in
-            (VRef (highest_key + 1) , Map.insert (highest_key + 1) store_this new_map)
+        if Map.null new_map then (VRef 0  , Map.insert 0 store_this new_map)
+           else let highest_key = maximum (Map.keys new_map) in
+                (VRef (highest_key + 1) , Map.insert (highest_key + 1) store_this new_map)
 eval h (CGet key) my_map = --error "This isn't either" --K for key
-    let (evaled_key , new_map) = eval h key my_map in
-        (Map.lookup evaled_key new_map , new_map)
+    let (VRef evaled_key , new_map) = eval h key my_map in
+        (fromJust(Map.lookup evaled_key new_map) , new_map)
 eval h (CPut key to_be_stored) my_map = -- error "Why haven't you learned yet?"
-    let (evaled_key , my_map2) = eval h key my_map
+    let (VRef evaled_key , my_map2) = eval h key my_map
         (evaled_storage, my_map3) = eval h to_be_stored my_map2
         newest_map = Map.insert evaled_key evaled_storage my_map3 in
         (VUnit , newest_map)

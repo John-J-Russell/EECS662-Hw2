@@ -1,0 +1,5 @@
+--(VInt 91 , fromList [(0,VInt 7),(1,VInt 13),(2,VInt13)]
+let x = ref 7 in
+let y = ref 13 in
+let z = ref 18 in
+(put z (get y)); (get z) * (get x)
